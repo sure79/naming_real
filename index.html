@@ -72,28 +72,6 @@
     );
 
     /***** 데이터 설정 *****/
-    // 다양한 성씨 목록 (한국에서 흔히 쓰는 성씨)
-    const COMMON_SURNAMES = ['김', '이', '박', '최', '정', '강', '조', '윤', '장', '임', '오', '한', '서', '신', '전', '홍'];
-    // 각 성씨에 임의로 할당한 수비학 번호 (예시)
-    const COMMON_SURNAMES_NUMBERS = {
-      '김': 3,
-      '이': 9,
-      '박': 8,
-      '최': 7,
-      '정': 6,
-      '강': 8,
-      '조': 9,
-      '윤': 5,
-      '장': 7,
-      '임': 3,
-      '오': 8,
-      '한': 6,
-      '서': 4,
-      '신': 11,
-      '전': 10,
-      '홍': 9
-    };
-
     // 남자 이름 글자 (더 다양하게)
     const MALE_CHARS = {
       3: ['민', '임', '수', '무', '림', '매', '겸', '혁'],
@@ -164,22 +142,19 @@
       return [fv, sum];
     };
 
-    // 이름 설명 생성 함수
-    const getNameExplanation = (surname, surnameNumber, middleChar, middleNumber, endChar, endNumber) => {
-      return `• ${surname} (성): ${surnameNumber}번 - ${NUMBER_MEANINGS[surnameNumber]}
-  성격: ${NUMBER_PERSONALITIES[surnameNumber]}
-
-• ${middleChar}: ${middleNumber}번 - ${NUMBER_MEANINGS[middleNumber]}
+    // 이름 설명 생성 함수 (수비학 타로 이름에서 성 제외)
+    const getNameExplanation = (middleChar, middleNumber, endChar, endNumber) => {
+      return `• ${middleChar}: ${middleNumber}번 - ${NUMBER_MEANINGS[middleNumber]}
   성격: ${NUMBER_PERSONALITIES[middleNumber]}
 
 • ${endChar}: ${endNumber}번 - ${NUMBER_MEANINGS[endNumber]}
   성격: ${NUMBER_PERSONALITIES[endNumber]}
 
-총합 ${surnameNumber + middleNumber + endNumber}번의 기운을 지니며, 서로 다른 에너지가 조화를 이루어
+총합 ${middleNumber + endNumber}번의 기운을 지니며, 서로 다른 에너지가 조화를 이루어
 긍정적인 연애와 인생의 흐름을 만들어줄 것으로 기대됩니다.`;
     };
 
-    // 작명 추천: 양력과 음력 사주번호를 모두 반영하여, 두 입력값의 합집합에 없는 "좋은" 숫자들 중에서 이름 글자를 선택
+    // 작명 추천: 성은 제외하고 중간 글자와 마지막 글자만 사용 (이름만 추천)
     const generateNames = (solarHaeun, lunarHaeun, selectedGender) => {
       // 사용자 사주번호 집합 (중복 제거)
       const userNumbers = new Set();
@@ -196,11 +171,7 @@
       const charSet = selectedGender === 'male' ? MALE_CHARS : FEMALE_CHARS;
       
       while(names.length < 5) {
-        // 성씨 선택: COMMON_SURNAMES 사용
-        const surname = COMMON_SURNAMES[Math.floor(Math.random() * COMMON_SURNAMES.length)];
-        const surnameNumber = COMMON_SURNAMES_NUMBERS[surname];
-
-        // 중간 글자: 랜덤하게 availableNumbers 중 하나 선택
+        // 중간 글자: availableNumbers 중 하나 선택
         const middleNumber = availableNumbers[Math.floor(Math.random() * availableNumbers.length)];
         const middleOptions = charSet[middleNumber] || (selectedGender === 'male' ? MALE_CHARS[3] : FEMALE_CHARS[3]);
         const middleChar = middleOptions[Math.floor(Math.random() * middleOptions.length)];
@@ -217,19 +188,18 @@
           retry++;
         }
         if(endChar === middleChar) continue;
-        const fullName = surname + middleChar + endChar;
+        const fullName = middleChar + endChar; // 성씨 제거, 이름만
         if (!usedNames.has(fullName)) {
           usedNames.add(fullName);
-          // 이름 점수: 예시로, 이상적인 합계는 10; 점수 = 100 - 5 * |nameSum - 10|, 최소 0, 최대 100
-          const nameSum = surnameNumber + middleNumber + endNumber;
+          const nameSum = middleNumber + endNumber;
           let score = 100 - (Math.abs(nameSum - 10) * 5);
           if (score < 0) score = 0;
           if (score > 100) score = 100;
           names.push({
             name: fullName,
-            numbers: [surnameNumber, middleNumber, endNumber],
+            numbers: [middleNumber, endNumber],
             totalNumber: nameSum,
-            explanation: getNameExplanation(surname, surnameNumber, middleChar, middleNumber, endChar, endNumber),
+            explanation: getNameExplanation(middleChar, middleNumber, endChar, endNumber),
             score: score
           });
         }
@@ -248,7 +218,7 @@
       useEffect(() => {
         const observer = new IntersectionObserver((entries, observer) => {
           entries.forEach(entry => {
-            if (entry.isIntersecting) {
+            if(entry.isIntersecting) {
               entry.target.classList.add('visible');
               observer.unobserve(entry.target);
             }
@@ -327,13 +297,16 @@
                   maxLength="8"
                 />
               </div>
+<center><div><p> 괜찮은 이름이 나올때까지 추천받으시면 됩니다. </p></div></center>
               <div className="flex justify-center">
+
                 <button
                   onClick={handleSubmit}
                   className="px-6 py-3 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-xl"
                 >
                   이름 추천받기
                 </button>
+
               </div>
 
               {recommendations && (
@@ -346,7 +319,7 @@
                       <p className="text-xl font-bold">음력 해운: {recommendations.lunarHaeun.join('/')}번</p>
                     )}
                     <p className="text-lg text-gray-600">
-                      위 사주번호에 없는 긍정적인 기운을 바탕으로 추천한 이름입니다.
+                      위 사주번호에 없는 긍정적 기운을 바탕으로 추천한 이름입니다.
                     </p>
                   </div>
                   <div className="space-y-6">
